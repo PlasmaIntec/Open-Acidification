@@ -1,5 +1,3 @@
-#include <string>
-
 String readUntilSpace(char* buffer, int& end, int size) {
 	String result = "";
 	int start = end;

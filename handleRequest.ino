@@ -1,5 +1,3 @@
-#include <string>
-
 void handleRequest(EthernetClient client) {
 	Serial.println("new client");
     // an http request ends with a blank line
