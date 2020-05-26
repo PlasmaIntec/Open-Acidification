@@ -690,6 +690,7 @@ void loop()
     Get_Temperature();
     Set_Temp_Comp();
     Set_Chiller();
+    updateGoals();
     if (!pidrun) {
       if (pH > phset) {
         onTime = 10000;
@@ -703,7 +704,11 @@ void loop()
       onTime = Output;
     }
     LCDupdate();
-    LogToSD();
+    unsigned long second_currentMillis = millis();
+    if (second_currentMillis - second_previousMillis >= second_interval) {
+      second_previousMillis = second_currentMillis;
+      LogToSD();
+    }
     digitalClockDisplay();
     Serial.print(F("freeMemory()="));
     Serial.println(freeMemory());
@@ -812,7 +817,7 @@ void loop()
       handleRequest(RPClient);    
 
       // give the web browser time to receive the data
-      delay(1);
+      delay(1000);
       // close the connection:
       RPClient.stop();
       Serial.println("RPClient disconnected");

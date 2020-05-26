@@ -1,18 +1,36 @@
 void handleData(String endpoint, EthernetClient client) {	  
-	client.println("HTTP/1.1 200 OK");
-	client.println("Content-Type: text/html");
-	client.println("Connection: close");  // the connection will be closed after completion of the response
-	client.println("Refresh: 5");  // refresh the page automatically every 5 sec
-	client.println();
-	client.println("<!DOCTYPE HTML>");
-	client.println("<html>");
 	// data endpoint format: data/year/month/day/hour
-	File myFile;
 	String directoryName;
 	if (endpoint.length() >= 5) {
 		directoryName = endpoint.substring(5); // remove "/data/" prefix
 	} else {
 		directoryName = "/";
+	}
+	long startingLine = 0;
+	long numLines = 0;
+	long lastLines = 0;
+	int lastIndex = -1;
+	// check if there are url parameters 
+	int urlParameterIndex = directoryName.indexOf("?");
+	if (urlParameterIndex > -1) {
+		String urlParameter = directoryName.substring(urlParameterIndex);
+		directoryName = directoryName.substring(0, urlParameterIndex);
+		lastIndex = urlParameter.indexOf("last");
+		if (lastIndex > -1) { // print last lines
+			lastLines = urlParameter.substring(lastIndex+5).toInt();
+			Serial.println("========");
+			Serial.println(lastLines);
+			Serial.println("========");
+		} else { // print specified lines
+			int startIndex = urlParameter.indexOf("start");
+			int numIndex = urlParameter.indexOf("num");
+			startingLine = urlParameter.substring(startIndex+6, numIndex-1).toInt();
+			numLines = urlParameter.substring(numIndex+4).toInt();
+			Serial.println("========");
+			Serial.println(startingLine);
+			Serial.println(numLines);
+			Serial.println("========");
+		}
 	}
 	char* pch;
 	int slashes = -1;
@@ -22,35 +40,37 @@ void handleData(String endpoint, EthernetClient client) {
 		pch = strtok(NULL, "/");
 		slashes += 1;
 	}
+	File dir = SD.open(directoryName);
+	Serial.print("HOW MANY SLASHES: ");
+	Serial.println(slashes);
 	switch (slashes) {
 		case 0: // data: return years available
-			printCurrentLevelDirectories(directoryName, client);
-			break;
 		case 1: // year: return months available
-			printCurrentLevelDirectories(directoryName, client);
-			break;
 		case 2: // month: return days available
-			printCurrentLevelDirectories(directoryName, client);
-			break;
 		case 3: // day: return hours available
-			printCurrentLevelDirectories(directoryName, client);
+			Serial.println("START BUILDING JSON");
+			printCurrentLevelDirectories(dir, client, slashes);
 			break;
-		case 4: // hour: return csv of the specific hour
-			printFileInDirectory(directoryName, client);
+		case 4: 
+			String fileName = "/" + directoryName.substring(3,5) + directoryName.substring(6,8) + directoryName.substring(9,11) + directoryName.substring(12,14) + ".txt";  
+			directoryName.concat(fileName);
+			if (urlParameterIndex > -1 && lastIndex > -1) { // last lines: print lastLines in specified csv
+				Serial.print("PRINTING LAST LINES FROM FILE: ");
+				Serial.println(directoryName);
+				printLastLines(directoryName, client, lastLines);
+			} else if (urlParameterIndex > -1) { // specified lines: print numLines from startingLine in specified csv
+				Serial.print("PRINTING SPECIFIED LINES FROM FILE: ");
+				Serial.println(directoryName);
+				printSpecifiedLines(directoryName, client, startingLine, numLines);
+			} else { // hour: return csv of the specific hour
+				Serial.print("PRINTING FILE: ");
+				Serial.println(directoryName);
+				printFileInDirectory(directoryName, client);
+			}
 			break;
 		default:
-			client.println("INVALID FORMAT");
+			printHeader(client, 404);
 			break;
 	}
-
-	SD.mkdir("2020/4/12/1");
-	SD.mkdir("2020/4/12/2");
-	SD.mkdir("2020/4/12/3");
-	SD.mkdir("2020/4/11/1");
-	SD.remove("2020/4/12/1/20041201.txt");
-	myFile = SD.open("2020/4/12/1/20041201.txt", FILE_WRITE);
-	myFile.println("Today's data");
-	myFile.close();
-
-	client.println("</html>");
+	dir.close();
 }

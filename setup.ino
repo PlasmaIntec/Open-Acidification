@@ -15,8 +15,6 @@ void setup()
     Serial.println("RTC is NOT running!");
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));   // set the RTC to the date & time this sketch was compiled
   }
-  
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));   // set the RTC to the date & time this sketch was compiled
 
   // Store MAC address in EEPROM
   if (EEPROM.read(44) == '#') {
@@ -135,29 +133,8 @@ void setup()
 
   }
 
-
-  ///Starting the SD Card//////////////////////////////////////////////////////////////////////////////////
-  pinMode(10, OUTPUT);
-  digitalWrite(10, HIGH);
-  SD.begin(4);
-
-  DateTime now = rtc.now();
-  filename = String(now.year() - 2000) + "-" + now.month() + "-" + now.day();
-  file_full = filename + ".txt";
-
-  myFile = SD.open(file_full, FILE_WRITE);
-  myFile.println("time,tankid,temp,temp setpoint,pH,pH setpoint,onTime,Kp,Ki,Kd");
-  myFile.close();
-  SD_previousMillis = millis();
-  File root = SD.open("/");
-  printDirectory(root, 0);
-  ///Starting the SD Card//////////////////////////////////////////////////////////////////////////////////
-
-
   //loading Tank ID///////////////////////////////////////////////////////////////////////////////////////
   tankid = EEPROM_readDouble(tankidAddress);
-
-
   if (isnan(tankid))
   {
     lcd.clear();
@@ -203,6 +180,72 @@ void setup()
     maxDataAge = 800; // default max data age
     EEPROM_writeDouble(maxDataAgeAddress, maxDataAge);
   }
+
+  // load phSeriesSizeAddress;
+  phSeriesSize = EEPROM_readDouble(phSeriesSizeAddress);
+  if (isnan(phSeriesSize)) {
+    phSeriesSize = 0;
+    EEPROM_writeDouble(phSeriesSizeAddress, phSeriesSize);
+  }
+
+  // load phSeriesPointerAddress;
+  phSeriesPointer = EEPROM_readDouble(phSeriesPointerAddress);
+  if (isnan(phSeriesPointer)) {
+    phSeriesPointer = 0;
+    EEPROM_writeDouble(phSeriesPointerAddress, phSeriesPointer);
+  }
+
+  // load tempSeriesSizeAddress;
+  tempSeriesSize = EEPROM_readDouble(tempSeriesSizeAddress);
+  if (isnan(tempSeriesSize)) {
+    tempSeriesSize = 0;
+    EEPROM_writeDouble(tempSeriesSizeAddress, tempSeriesSize);
+  }
+
+  // load tempSeriesPointerAddress;
+  tempSeriesPointer = EEPROM_readDouble(tempSeriesPointerAddress);
+  if (isnan(tempSeriesPointer)) {
+    tempSeriesPointer = 0;
+    EEPROM_writeDouble(tempSeriesPointerAddress, tempSeriesPointer);
+  }
+
+  // load phInterval;
+  phInterval = EEPROM_readDouble(phIntervalAddress);
+  if (isnan(phIntervalAddress)) {
+    phInterval = 0;
+    EEPROM_writeDouble(phIntervalAddress, phInterval);
+  }
+
+  // load phDelay;
+  phDelay = EEPROM_readDouble(phDelayAddress);
+  if (isnan(phDelayAddress)) {
+    phDelay = 0;
+    EEPROM_writeDouble(phDelayAddress, phDelay);
+  }
+
+  // load tempInterval;
+  tempInterval = EEPROM_readDouble(tempIntervalAddress);
+  if (isnan(tempIntervalAddress)) {
+    tempInterval = 0;
+    EEPROM_writeDouble(tempIntervalAddress, tempInterval);
+  }
+
+  // load tempDelay;
+  tempDelay = EEPROM_readDouble(tempDelayAddress);
+  if (isnan(tempDelayAddress)) {
+    tempDelay = 0;
+    EEPROM_writeDouble(tempDelayAddress, tempDelay);
+  }
+
+  ///Starting the SD Card//////////////////////////////////////////////////////////////////////////////////
+  pinMode(10, OUTPUT);
+  digitalWrite(10, HIGH);
+  SD.begin(4);
+
+  File root = SD.open("/");
+  printDirectory(root, 0);
+  doDirectoryMaintenance();
+  ///Starting the SD Card//////////////////////////////////////////////////////////////////////////////////
 
   //Setting PID parameters////////////////////////////////////////////////////////////////////////////////////////
   myPID.SetTunings(Kp, Ki, Kd);

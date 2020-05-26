@@ -9,65 +9,105 @@ void LogToSD() {
   digitalWrite(10, HIGH);
   Serial.println("LOGGING TO SD");
 
-  char formattedFileName[12];
   char* timeFormat = "YYYY/MM/DD/hh/YYMMDDhh.txt";
-  char* formattedTime = now.toString(timeFormat);
+  char* linesFormat = "YYYY/MM/DD/hh/hh.txt";
+  char* formattedFileName = now.toString(timeFormat);
+  char* formattedLineFileName = now.toString(linesFormat);
   char* directoryFormat = "YYYY/MM/DD/hh";
   char* formattedDirectoryName = now.toString(directoryFormat);
-  strcpy(formattedFileName, formattedTime);
   Serial.println(formattedDirectoryName);
   Serial.println(formattedFileName);
-  
-  if (SD_currentMillis - SD_previousMillis >= SD_interval) {
-    SD_previousMillis = SD_currentMillis;
-    SD.mkdir(formattedDirectoryName);
-
-    myFile = SD.open(formattedFileName, FILE_WRITE);
-    myFile.println("time,temp,temp setpoint,pH,pH setpoint");
-    myFile.close();
-  }
 
   pinMode(10, OUTPUT);
   digitalWrite(10, HIGH);
   SD.mkdir(formattedDirectoryName);
+
+  // update accompanying line-count file
+  File lineFile = SD.open(formattedLineFileName, FILE_WRITE);
+  int lineFileSize = lineFile.size();
+  if (!lineFileSize) {
+    lineFile.println("1");
+    lineFile.close();
+  } else {
+    char linesBuffer[10];
+    lineFile.seek(0);
+    byte read;
+    for (int i = 0; i < 10 && read != -1; i++) {
+      read = lineFile.read();
+      linesBuffer[i] = (char)read;
+    }
+    int lineCount = atoi(linesBuffer);
+    lineFile.close();
+    SD.remove(formattedLineFileName);
+    lineFile = SD.open(formattedLineFileName, FILE_WRITE);
+    char lineCountBuffer[10];
+    sprintf(lineCountBuffer, "%d", lineCount+1);
+    lineFile.println(lineCountBuffer);
+    lineFile.close();
+  }
+
   myFile = SD.open(formattedFileName, FILE_WRITE);
-  SDstring = "";
-  SDstring += String(now.month(), DEC);
-  SDstring += "/";
-  SDstring += String(now.day(), DEC);
-  SDstring += "/";
-  SDstring += String(now.year(), DEC);
-  SDstring += " ";
-  SDstring += String(now.hour(), DEC);
-  SDstring += ":";
-  if (now.minute() < 10) {
-    SDstring += "0";
+  // create information string with timestamp
+  char formattedSDString[recordLength];
+  memset(formattedSDString, 0, recordLength);
+  char timeBuffer[100];
+  memset(timeBuffer, 0, 100);
+  char varBuffer[100];
+  memset(varBuffer, 0, 100);
+  DateTime tempNow = rtc.now();
+  fmtDouble(tempNow.year(), 0, timeBuffer, 0xffff);
+  strcat(formattedSDString, timeBuffer);
+  strcat(formattedSDString, "/");
+  fmtDouble(tempNow.month(), 0, timeBuffer, 0xffff);
+  strcat(formattedSDString, timeBuffer);
+  strcat(formattedSDString, "/");
+  fmtDouble(tempNow.day(), 0, timeBuffer, 0xffff);
+  strcat(formattedSDString, timeBuffer);
+  strcat(formattedSDString, " ");
+  fmtDouble(tempNow.hour(), 0, timeBuffer, 0xffff);
+  strcat(formattedSDString, timeBuffer);
+  strcat(formattedSDString, ":");
+  if (tempNow.minute() < 10) {
+    strcat(formattedSDString, "0");
   }
-  SDstring += String(now.minute(), DEC);
-  SDstring += ":";
-  if (now.second() < 10) {
-    SDstring += "0";
+  fmtDouble(tempNow.minute(), 0, timeBuffer, 0xffff);
+  strcat(formattedSDString, timeBuffer);
+  strcat(formattedSDString, ":");
+  if (tempNow.second() < 10) {
+    strcat(formattedSDString, "0");
   }
-  SDstring += String(now.second(), DEC);
-  SDstring += ",";
-  SDstring += tankid;
-  SDstring += ",";
-  SDstring += String(temp, 2);
-  SDstring += ",";
-  SDstring += String(tempset, 2);
-  SDstring += ",";
-  SDstring += String(pH, 3);
-  SDstring += ",";
-  SDstring += String(phset, 3);
-  SDstring += ",";
-  SDstring += String(onTime);
-  SDstring += ",";
-  SDstring += Kp;
-  SDstring += ",";
-  SDstring += Ki;
-  SDstring += ",";
-  SDstring += Kd;
-  myFile.println(SDstring);
+  fmtDouble(tempNow.second(), 0, timeBuffer, 0xffff);
+  strcat(formattedSDString, timeBuffer);
+
+  snprintf(varBuffer, 100, "%d", tankid);
+  strcat(formattedSDString, ",");
+  strcat(formattedSDString, varBuffer);
+  fmtDouble(temp, 2, varBuffer, 0xffff);
+  strcat(formattedSDString, ",");
+  strcat(formattedSDString, varBuffer);
+  fmtDouble(tempset, 2, varBuffer, 0xffff);
+  strcat(formattedSDString, ",");
+  strcat(formattedSDString, varBuffer);
+  fmtDouble(pH, 3, varBuffer, 0xffff);
+  strcat(formattedSDString, ",");
+  strcat(formattedSDString, varBuffer);
+  fmtDouble(phset, 3, varBuffer, 0xffff);
+  strcat(formattedSDString, ",");
+  strcat(formattedSDString, varBuffer);
+  fmtDouble(onTime, 0, varBuffer, 0xffff);
+  strcat(formattedSDString, ",");
+  strcat(formattedSDString, varBuffer);
+
+  Serial.print("formattedSDString SIZE: ");
+  Serial.println(strlen(formattedSDString));
+  Serial.print("ADDING: ");
+  Serial.println(recordLength - strlen(formattedSDString));
+  for (strlen(formattedSDString); strlen(formattedSDString) < recordLength;) {
+    strcat(formattedSDString, " ");
+  }
+  Serial.print("AFTER EDIT formattedSDString SIZE: ");
+  Serial.println(strlen(formattedSDString));
+  myFile.println(formattedSDString);
   myFile.close();
-  Serial.println(SDstring);
+  Serial.println(formattedSDString);
 }
