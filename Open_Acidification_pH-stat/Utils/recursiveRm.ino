@@ -10,7 +10,7 @@ void recursiveRm(File dir, String tempPath) {
     if (entry) {
       if ( entry.isDirectory() )
       {
-        localPath = tempPath + "/" + entry.name() + "/" + '\0';
+        localPath = tempPath + entry.name() + "/" + '\0';
         char folderBuf[localPath.length()];
         localPath.toCharArray(folderBuf, localPath.length() );
         recursiveRm(entry, folderBuf);

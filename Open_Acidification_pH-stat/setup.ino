@@ -11,6 +11,8 @@ void setup()
     while (1);
   }
 
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));   // set the RTC to the date & time this sketch was compiled
+
   if (! rtc.initialized()) {
     Serial.println("RTC is NOT running!");
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));   // set the RTC to the date & time this sketch was compiled
@@ -245,6 +247,7 @@ void setup()
   File root = SD.open("/");
   printDirectory(root, 0);
   // doDirectoryMaintenance();
+  // SD.remove("2020/06/01/01/20060101.txt");
   ///Starting the SD Card//////////////////////////////////////////////////////////////////////////////////
 
   //Setting PID parameters////////////////////////////////////////////////////////////////////////////////////////
